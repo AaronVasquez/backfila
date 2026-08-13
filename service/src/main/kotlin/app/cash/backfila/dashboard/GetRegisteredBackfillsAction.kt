@@ -16,8 +16,10 @@ import misk.web.actions.WebAction
 import misk.web.mediatype.MediaTypes
 
 data class RegisteredBackfill(
+  val registeredBackfillId: Long,
   val name: String,
   val parameterNames: List<String>,
+  val requiresApproval: Boolean,
 )
 data class GetRegisteredBackfillsResponse(val backfills: List<RegisteredBackfill>)
 
@@ -48,8 +50,10 @@ class GetRegisteredBackfillsAction @Inject constructor(
         .list(session)
       backfills.map {
         RegisteredBackfill(
+          it.id.id,
           it.name,
           it.parameterNames(),
+          it.requires_approval,
         )
       }
     }

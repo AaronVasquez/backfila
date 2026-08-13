@@ -7,6 +7,7 @@ import app.cash.backfila.client.Connectors
 import app.cash.backfila.dashboard.CreateBackfillAction
 import app.cash.backfila.dashboard.GetBackfillRunsAction
 import app.cash.backfila.dashboard.GetBackfillStatusAction
+import app.cash.backfila.dashboard.GetRegisteredBackfillsAction
 import app.cash.backfila.dashboard.StartBackfillAction
 import app.cash.backfila.dashboard.StartBackfillRequest
 import app.cash.backfila.dashboard.StopAllBackfillsAction
@@ -63,6 +64,9 @@ class StartStopBackfillActionTest {
 
   @Inject
   lateinit var getBackfillStatusAction: GetBackfillStatusAction
+
+  @Inject
+  lateinit var getRegisteredBackfillsAction: GetRegisteredBackfillsAction
 
   @Inject
   lateinit var queryFactory: Query.Factory
@@ -526,6 +530,21 @@ class StartStopBackfillActionTest {
   @ValueSource(booleans = [true, false])
   fun `required backfills need a different human approver for dry and wet runs`(dryRun: Boolean) {
     val id = createApprovalBackfill(dryRun)
+    val pending = getBackfillStatusAction.status(id)
+    val registered = getRegisteredBackfillsAction.backfills("deep-fryer", RESERVED_VARIANT).backfills.single()
+    assertThat(pending.registered_backfill_id).isEqualTo(registered.registeredBackfillId)
+    assertThat(pending.requires_approval).isTrue()
+    assertThat(pending.approved_by_user).isNull()
+    assertThat(pending.approved_at).isNull()
+    assertThat(registered.requiresApproval).isTrue()
+
+    configureApprovalBackfill(requiresApproval = false)
+    val currentRegistration = getRegisteredBackfillsAction.backfills("deep-fryer", RESERVED_VARIANT).backfills.single()
+    val unchangedSnapshot = getBackfillStatusAction.status(id)
+    assertThat(currentRegistration.registeredBackfillId).isNotEqualTo(pending.registered_backfill_id)
+    assertThat(currentRegistration.requiresApproval).isFalse()
+    assertThat(unchangedSnapshot.registered_backfill_id).isEqualTo(pending.registered_backfill_id)
+    assertThat(unchangedSnapshot.requires_approval).isTrue()
 
     assertThatThrownBy {
       scope.fakeCaller(user = "diana") {
@@ -557,6 +576,9 @@ class StartStopBackfillActionTest {
       assertThat(run.approved_by_user).isEqualTo("diana")
       assertThat(run.approved_at).isNotNull()
     }
+    val approved = getBackfillStatusAction.status(id)
+    assertThat(approved.approved_by_user).isEqualTo("diana")
+    assertThat(approved.approved_at).isNotNull()
   }
 
   @Test
@@ -626,21 +648,7 @@ class StartStopBackfillActionTest {
   }
 
   private fun createApprovalBackfill(dryRun: Boolean): Long {
-    scope.fakeCaller(service = "deep-fryer") {
-      configureServiceAction.configureService(
-        ConfigureServiceRequest.Builder()
-          .backfills(
-            listOf(
-              ConfigureServiceRequest.BackfillData(
-                "ChickenSandwich", "Description", listOf(), null,
-                null, true, null, null,
-              ),
-            ),
-          )
-          .connector_type(Connectors.ENVOY)
-          .build(),
-      )
-    }
+    configureApprovalBackfill(requiresApproval = true)
     return scope.fakeCaller(user = "molly") {
       createBackfillAction.create(
         "deep-fryer",
@@ -650,6 +658,24 @@ class StartStopBackfillActionTest {
           .dry_run(dryRun)
           .build(),
       ).backfill_run_id
+    }
+  }
+
+  private fun configureApprovalBackfill(requiresApproval: Boolean) {
+    scope.fakeCaller(service = "deep-fryer") {
+      configureServiceAction.configureService(
+        ConfigureServiceRequest.Builder()
+          .backfills(
+            listOf(
+              ConfigureServiceRequest.BackfillData(
+                "ChickenSandwich", "Description", listOf(), null,
+                null, requiresApproval, null, null,
+              ),
+            ),
+          )
+          .connector_type(Connectors.ENVOY)
+          .build(),
+      )
     }
   }
 }

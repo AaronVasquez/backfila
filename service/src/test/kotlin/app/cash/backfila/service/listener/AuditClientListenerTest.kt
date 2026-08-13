@@ -14,6 +14,7 @@ import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.service.persistence.RunPartitionQuery
 import com.google.inject.Module
 import jakarta.inject.Inject
+import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import misk.audit.FakeAuditClient
@@ -90,6 +91,8 @@ internal class AuditClientListenerTest {
         assertThat(run.approved_at).isNull()
         assertThat(run.parameters()).isEmpty()
         assertThat(response.backfill_run_id).isEqualTo(run.id.id)
+        run.approved_by_user = "diana"
+        run.approved_at = Instant.parse("2020-01-01T00:00:00Z")
 
         val partitions = queryFactory.newQuery<RunPartitionQuery>()
           .backfillRunId(run.id)
@@ -113,8 +116,7 @@ internal class AuditClientListenerTest {
           eventTarget = "ChickenSandwich",
           timestampSent = 2147483647,
           applicationName = "deep-fryer",
-          // Fix fake client to not provide approver unless explicitly present
-          approverLDAP = null,
+          approverLDAP = "diana",
           automatedChange = false,
           description = "Backfill started by molly [dryRun=true][service=deep-fryer][backfill=ChickenSandwich][id=${response.backfill_run_id}]",
           richDescription = null,
