@@ -1,5 +1,6 @@
 package app.cash.backfila.dashboard
 
+import app.cash.backfila.service.listener.ApprovalAwareBackfillRunListener
 import app.cash.backfila.service.listener.BackfillRunListener
 import app.cash.backfila.service.persistence.BackfilaDb
 import app.cash.backfila.service.persistence.BackfillState
@@ -45,7 +46,7 @@ class BackfillStateToggler @Inject constructor(
       else -> throw IllegalArgumentException("can only toggle to RUNNING or PAUSED")
     }
 
-    transacter.transaction { session ->
+    val approvalRequestor = transacter.transaction { session ->
       val run = session.loadOrNull<DbBackfillRun>(Id(id))
         ?: throw BadRequestException("backfill $id doesn't exist")
       logger.info {
@@ -61,8 +62,10 @@ class BackfillStateToggler @Inject constructor(
           "backfill $id isn't $requiredCurrentState, can't move to state $desiredState",
         )
       }
-      if (desiredState == RUNNING) {
+      val approvalRequestor = if (desiredState == RUNNING) {
         enforceApproval(run, caller, approve)
+      } else {
+        null
       }
       run.setState(session, queryFactory, desiredState)
 
@@ -76,17 +79,24 @@ class BackfillStateToggler @Inject constructor(
           message = "backfill $startedOrStopped",
         ),
       )
+      approvalRequestor
     }
 
     if (desiredState == RUNNING) {
-      backfillRunListeners.forEach { it.runStarted(Id(id), caller.principal) }
+      backfillRunListeners.forEach {
+        if (approvalRequestor != null && it is ApprovalAwareBackfillRunListener) {
+          it.runApprovedAndStarted(Id(id), caller.principal, approvalRequestor)
+        } else {
+          it.runStarted(Id(id), caller.principal)
+        }
+      }
     } else {
       backfillRunListeners.forEach { it.runPaused(Id(id), caller.principal) }
     }
   }
 
-  private fun enforceApproval(run: DbBackfillRun, caller: MiskCaller, approve: Boolean) {
-    if (!run.registered_backfill.requires_approval) return
+  private fun enforceApproval(run: DbBackfillRun, caller: MiskCaller, approve: Boolean): String? {
+    if (!run.registered_backfill.requires_approval) return null
 
     val creator = run.created_by_user
       ?: throw BadRequestException("backfill ${run.id.id} is missing its creator")
@@ -99,7 +109,7 @@ class BackfillStateToggler @Inject constructor(
       if (approver == creator) {
         throw BadRequestException("backfill ${run.id.id} was approved by its creator")
       }
-      return
+      return null
     }
     if (!approve) {
       throw BadRequestException("backfill ${run.id.id} requires approval before it can start")
@@ -112,6 +122,7 @@ class BackfillStateToggler @Inject constructor(
     }
     run.approved_by_user = approvingUser
     run.approved_at = clock.instant()
+    return creator
   }
 
   companion object {

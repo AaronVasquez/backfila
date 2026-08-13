@@ -10,3 +10,7 @@ interface BackfillRunListener {
   fun runCompleted(id: Id<DbBackfillRun>)
   fun runCancelled(id: Id<DbBackfillRun>, user: String)
 }
+
+internal interface ApprovalAwareBackfillRunListener : BackfillRunListener {
+  fun runApprovedAndStarted(id: Id<DbBackfillRun>, user: String, requestor: String)
+}

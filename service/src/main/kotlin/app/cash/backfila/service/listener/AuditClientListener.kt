@@ -14,8 +14,16 @@ internal class AuditClientListener @Inject constructor(
   @BackfilaDb private val transacter: Transacter,
   private val auditClient: AuditClient,
   private val backfilaConfig: BackfilaConfig,
-) : BackfillRunListener {
+) : ApprovalAwareBackfillRunListener {
   override fun runStarted(id: Id<DbBackfillRun>, user: String) {
+    logRunStarted(id, user, user)
+  }
+
+  override fun runApprovedAndStarted(id: Id<DbBackfillRun>, user: String, requestor: String) {
+    logRunStarted(id, user, requestor)
+  }
+
+  private fun logRunStarted(id: Id<DbBackfillRun>, user: String, requestor: String) {
     val (backfillName, serviceName, description, approverLDAP) = transacter.transaction { session ->
       val run = session.load<DbBackfillRun>(id)
       AuditEventInputs(run.registered_backfill.name, serviceName(run), "Backfill started by $user ${dryRunPrefix(run)}${nameAndId(run)}", run.approved_by_user)
@@ -23,7 +31,7 @@ internal class AuditClientListener @Inject constructor(
     auditClient.logEvent(
       target = backfillName,
       description = description,
-      requestorLDAP = user,
+      requestorLDAP = requestor,
       approverLDAP = approverLDAP,
       applicationName = serviceName,
       detailURL = idUrl(id),

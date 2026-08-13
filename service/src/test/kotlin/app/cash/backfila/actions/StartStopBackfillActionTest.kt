@@ -24,6 +24,7 @@ import com.google.inject.Module
 import jakarta.inject.Inject
 import java.time.Instant
 import kotlin.test.assertNotNull
+import misk.audit.FakeAuditClient
 import misk.exceptions.BadRequestException
 import misk.hibernate.Id
 import misk.hibernate.Query
@@ -67,6 +68,9 @@ class StartStopBackfillActionTest {
 
   @Inject
   lateinit var getRegisteredBackfillsAction: GetRegisteredBackfillsAction
+
+  @Inject
+  lateinit var fakeAuditClient: FakeAuditClient
 
   @Inject
   lateinit var queryFactory: Query.Factory
@@ -564,11 +568,22 @@ class StartStopBackfillActionTest {
 
     scope.fakeCaller(user = "diana") {
       startBackfillAction.start(id, StartBackfillRequest(approve = true))
+    }
+    val approvedStartAudit = fakeAuditClient.sentEvents.single()
+    assertThat(approvedStartAudit.requestorLDAP).isEqualTo("molly")
+    assertThat(approvedStartAudit.approverLDAP).isEqualTo("diana")
+    assertThat(approvedStartAudit.description).contains("started by diana")
+
+    scope.fakeCaller(user = "diana") {
       stopBackfillAction.stop(id, StopBackfillRequest())
     }
     scope.fakeCaller(user = "emma") {
       startBackfillAction.start(id, StartBackfillRequest())
     }
+    val resumedStartAudit = fakeAuditClient.sentEvents.last()
+    assertThat(resumedStartAudit.requestorLDAP).isEqualTo("emma")
+    assertThat(resumedStartAudit.approverLDAP).isEqualTo("diana")
+    assertThat(resumedStartAudit.description).contains("started by emma")
 
     transacter.transaction { session ->
       val run = session.load(Id<DbBackfillRun>(id))
