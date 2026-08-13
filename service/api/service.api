@@ -246,31 +246,27 @@ public final class app/cash/backfila/dashboard/GetBackfillStatusAction : misk/we
 }
 
 public final class app/cash/backfila/dashboard/GetBackfillStatusResponse {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZLapp/cash/backfila/service/persistence/BackfillState;Ljava/util/Map;JJZILjava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JLjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lapp/cash/backfila/service/persistence/BackfillState;Ljava/util/Map;JJZILjava/time/Instant;Ljava/lang/String;JLjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun component10 ()Z
-	public final fun component11 ()I
-	public final fun component12 ()Ljava/time/Instant;
+	public final fun component10 ()Ljava/time/Instant;
+	public final fun component11 ()Ljava/lang/String;
+	public final fun component12 ()J
 	public final fun component13 ()Ljava/lang/String;
-	public final fun component14 ()Ljava/lang/String;
-	public final fun component15 ()Ljava/time/Instant;
-	public final fun component16 ()J
+	public final fun component14 ()Ljava/util/List;
+	public final fun component15 ()Ljava/util/List;
+	public final fun component16 ()Ljava/time/Instant;
 	public final fun component17 ()Ljava/lang/String;
-	public final fun component18 ()Ljava/util/List;
-	public final fun component19 ()Ljava/util/List;
+	public final fun component18 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
-	public final fun component20 ()Ljava/time/Instant;
-	public final fun component21 ()Ljava/lang/String;
-	public final fun component22 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()J
-	public final fun component5 ()Z
-	public final fun component6 ()Lapp/cash/backfila/service/persistence/BackfillState;
-	public final fun component7 ()Ljava/util/Map;
-	public final fun component8 ()J
-	public final fun component9 ()J
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZLapp/cash/backfila/service/persistence/BackfillState;Ljava/util/Map;JJZILjava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JLjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;)Lapp/cash/backfila/dashboard/GetBackfillStatusResponse;
-	public static synthetic fun copy$default (Lapp/cash/backfila/dashboard/GetBackfillStatusResponse;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZLapp/cash/backfila/service/persistence/BackfillState;Ljava/util/Map;JJZILjava/time/Instant;Ljava/lang/String;Ljava/lang/String;Ljava/time/Instant;JLjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lapp/cash/backfila/dashboard/GetBackfillStatusResponse;
+	public final fun component4 ()Lapp/cash/backfila/service/persistence/BackfillState;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun component6 ()J
+	public final fun component7 ()J
+	public final fun component8 ()Z
+	public final fun component9 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lapp/cash/backfila/service/persistence/BackfillState;Ljava/util/Map;JJZILjava/time/Instant;Ljava/lang/String;JLjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;)Lapp/cash/backfila/dashboard/GetBackfillStatusResponse;
+	public static synthetic fun copy$default (Lapp/cash/backfila/dashboard/GetBackfillStatusResponse;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lapp/cash/backfila/service/persistence/BackfillState;Ljava/util/Map;JJZILjava/time/Instant;Ljava/lang/String;JLjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lapp/cash/backfila/dashboard/GetBackfillStatusResponse;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getApproved_at ()Ljava/time/Instant;
 	public final fun getApproved_by_user ()Ljava/lang/String;
@@ -414,13 +410,11 @@ public final class app/cash/backfila/dashboard/RangeCloneType : java/lang/Enum {
 }
 
 public final class app/cash/backfila/dashboard/RegisteredBackfill {
-	public fun <init> (JLjava/lang/String;Ljava/util/List;Z)V
-	public final fun component1 ()J
-	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/util/List;
-	public final fun component4 ()Z
-	public final fun copy (JLjava/lang/String;Ljava/util/List;Z)Lapp/cash/backfila/dashboard/RegisteredBackfill;
-	public static synthetic fun copy$default (Lapp/cash/backfila/dashboard/RegisteredBackfill;JLjava/lang/String;Ljava/util/List;ZILjava/lang/Object;)Lapp/cash/backfila/dashboard/RegisteredBackfill;
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lapp/cash/backfila/dashboard/RegisteredBackfill;
+	public static synthetic fun copy$default (Lapp/cash/backfila/dashboard/RegisteredBackfill;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lapp/cash/backfila/dashboard/RegisteredBackfill;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getName ()Ljava/lang/String;
 	public final fun getParameterNames ()Ljava/util/List;

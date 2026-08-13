@@ -57,8 +57,6 @@ data class GetBackfillStatusResponse(
   val service_name: String,
   val variant: String,
   val name: String,
-  val registered_backfill_id: Long,
-  val requires_approval: Boolean,
   val state: BackfillState,
   val parameters: Map<String, String>?,
   val batch_size: Long,
@@ -67,8 +65,6 @@ data class GetBackfillStatusResponse(
   val num_threads: Int,
   val created_at: Instant,
   val created_by_user: String?,
-  val approved_by_user: String?,
-  val approved_at: Instant?,
   val extra_sleep_ms: Long,
   val backoff_schedule: String?,
   val partitions: List<UiPartition>,
@@ -76,7 +72,23 @@ data class GetBackfillStatusResponse(
   val deleted_at: Instant?,
   val next_offset: String?,
   val unit: String?,
-)
+) {
+  var registered_backfill_id: Long = 0
+    private set
+  var requires_approval: Boolean = false
+    private set
+  var approved_by_user: String? = null
+    private set
+  var approved_at: Instant? = null
+    private set
+
+  internal fun withApprovalMetadata(run: DbBackfillRun) = apply {
+    registered_backfill_id = run.registered_backfill_id.id
+    requires_approval = run.registered_backfill.requires_approval
+    approved_by_user = run.approved_by_user
+    approved_at = run.approved_at
+  }
+}
 
 class GetBackfillStatusAction @Inject constructor(
   @BackfilaDb private val transacter: Transacter,
@@ -109,8 +121,6 @@ class GetBackfillStatusAction @Inject constructor(
         run.service.registry_name,
         run.service.variant,
         run.registered_backfill.name,
-        run.registered_backfill_id.id,
-        run.registered_backfill.requires_approval,
         run.state,
         run.parameters()?.mapValues { (_, v) -> v.utf8() },
         run.batch_size,
@@ -119,8 +129,6 @@ class GetBackfillStatusAction @Inject constructor(
         run.num_threads,
         run.created_at,
         run.created_by_user,
-        run.approved_by_user,
-        run.approved_at,
         run.extra_sleep_ms,
         run.backoff_schedule,
         partitions.map { dbToUi(it) },
@@ -137,7 +145,7 @@ class GetBackfillStatusAction @Inject constructor(
         run.deleted_at,
         nextOffset?.offset,
         run.registered_backfill.unit,
-      )
+      ).withApprovalMetadata(run)
     }
   }
 

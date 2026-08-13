@@ -7,7 +7,9 @@ import app.cash.backfila.client.Connectors
 import app.cash.backfila.dashboard.CreateBackfillAction
 import app.cash.backfila.dashboard.GetBackfillRunsAction
 import app.cash.backfila.dashboard.GetBackfillStatusAction
+import app.cash.backfila.dashboard.GetBackfillStatusResponse
 import app.cash.backfila.dashboard.GetRegisteredBackfillsAction
+import app.cash.backfila.dashboard.RegisteredBackfill
 import app.cash.backfila.dashboard.StartBackfillAction
 import app.cash.backfila.dashboard.StartBackfillRequest
 import app.cash.backfila.dashboard.StopAllBackfillsAction
@@ -21,6 +23,7 @@ import app.cash.backfila.service.persistence.BackfilaDb
 import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.service.persistence.DbBackfillRun
 import com.google.inject.Module
+import com.squareup.moshi.Moshi
 import jakarta.inject.Inject
 import java.time.Instant
 import kotlin.test.assertNotNull
@@ -71,6 +74,9 @@ class StartStopBackfillActionTest {
 
   @Inject
   lateinit var fakeAuditClient: FakeAuditClient
+
+  @Inject
+  lateinit var moshi: Moshi
 
   @Inject
   lateinit var queryFactory: Query.Factory
@@ -541,6 +547,10 @@ class StartStopBackfillActionTest {
     assertThat(pending.approved_by_user).isNull()
     assertThat(pending.approved_at).isNull()
     assertThat(registered.requiresApproval).isTrue()
+    assertThat(moshi.adapter(GetBackfillStatusResponse::class.java).toJson(pending))
+      .contains("\"registered_backfill_id\":${registered.registeredBackfillId}", "\"requires_approval\":true")
+    assertThat(moshi.adapter(RegisteredBackfill::class.java).toJson(registered))
+      .contains("\"registeredBackfillId\":${registered.registeredBackfillId}", "\"requiresApproval\":true")
 
     configureApprovalBackfill(requiresApproval = false)
     val currentRegistration = getRegisteredBackfillsAction.backfills("deep-fryer", RESERVED_VARIANT).backfills.single()
