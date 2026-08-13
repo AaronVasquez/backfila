@@ -51,6 +51,8 @@ class DashboardPageLayout @Inject constructor(
   private val queryFactory: Query.Factory,
   private val allTabs: List<DashboardTab>,
 ) {
+  internal val currentUser get() = callerProvider.get()?.user
+
   private var newBuilder = false
   private var headBlock: TagConsumer<*>.() -> Unit = {}
   private var title: String = "Backfila"

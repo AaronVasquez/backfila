@@ -7,6 +7,7 @@ import app.cash.backfila.dashboard.ViewDashboardAction
 import app.cash.backfila.dashboard.ViewLogsAction
 import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.ui.actions.BackfillShowButtonHandlerAction
+import app.cash.backfila.ui.actions.canApproveBackfill
 import app.cash.backfila.ui.components.AutoReload
 import app.cash.backfila.ui.components.DashboardPageLayout
 import app.cash.backfila.ui.components.PageTitle
@@ -20,6 +21,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.html.ButtonType
+import kotlinx.html.FormMethod
 import kotlinx.html.InputType
 import kotlinx.html.TagConsumer
 import kotlinx.html.ThScope
@@ -133,7 +135,13 @@ class BackfillShowAction @Inject constructor(
                 div("flex items-start gap-2") {
                   div("flex flex-col") {
                     with(backfillShowButtonHandlerAction) {
-                      renderStateButtons(id.toString(), backfill.state, backfill.deleted_at)
+                      renderStateButtonsWithApproval(
+                        id.toString(),
+                        backfill.state,
+                        backfill.deleted_at,
+                        backfill.requires_approval && backfill.approved_by_user == null,
+                        canApproveBackfill(backfill.created_by_user, dashboardPageLayout.currentUser),
+                      )
                     }
                   }
                   div("flex items-center gap-2") {
@@ -646,6 +654,7 @@ class BackfillShowAction @Inject constructor(
               attributes["data-css-class"] = "hidden"
 
               action = BackfillShowButtonHandlerAction.path(id)
+              method = FormMethod.post
 
               it.updateFieldId?.let { updateFieldId ->
                 input {
@@ -719,6 +728,7 @@ class BackfillShowAction @Inject constructor(
               // Button when clicked updates without additional form
               form {
                 action = BackfillShowButtonHandlerAction.path(id)
+                method = FormMethod.post
 
                 it.updateFieldId?.let {
                   input {
@@ -753,6 +763,7 @@ class BackfillShowAction @Inject constructor(
                 span("ml-2") {
                   form {
                     action = BackfillShowButtonHandlerAction.path(id)
+                    method = FormMethod.post
 
                     it.updateFieldId?.let {
                       input {
@@ -785,6 +796,7 @@ class BackfillShowAction @Inject constructor(
           span("ml-2") {
             form {
               action = BackfillShowButtonHandlerAction.path(id)
+              method = FormMethod.post
 
               it.updateFieldId?.let {
                 input {
@@ -908,6 +920,8 @@ class BackfillShowAction @Inject constructor(
     fun path(id: String) = PATH.replace("{id}", id)
     fun path(id: Long) = path(id.toString())
 
+    internal const val APPROVE_AND_START_STATE_BUTTON_LABEL = "Approve and start"
+    internal const val APPROVE_AND_START_STATE_VALUE = "APPROVE_AND_START"
     const val START_STATE_BUTTON_LABEL = "Start"
     const val PAUSE_STATE_BUTTON_LABEL = "Pause"
     const val CANCEL_STATE_BUTTON_LABEL = "Cancel"

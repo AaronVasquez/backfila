@@ -32,7 +32,7 @@ import misk.jdbc.DataSourceType
 import misk.logging.LogCollectorModule
 import misk.scope.ActionScopedProviderModule
 
-internal class BackfilaTestingModule : KAbstractModule() {
+internal class BackfilaTestingModule(private val bindMiskCaller: Boolean = true) : KAbstractModule() {
   override fun configure() {
     val config = BackfilaConfig(
       backfill_runner_threads = null,
@@ -73,12 +73,14 @@ internal class BackfilaTestingModule : KAbstractModule() {
     bind(BackfillRunnerLoggingSetupProvider::class.java)
       .to(BackfillRunnerNoLoggingSetupProvider::class.java)
 
-    install(object : ActionScopedProviderModule() {
-      override fun configureProviders() {
-        bindSeedData(MiskCaller::class)
-      }
-    },
-    )
+    if (bindMiskCaller) {
+      install(object : ActionScopedProviderModule() {
+        override fun configureProviders() {
+          bindSeedData(MiskCaller::class)
+        }
+      },
+      )
+    }
 
     newMapBinder<String, BackfilaCallbackConnectorProvider>(ForConnectors::class)
       .addBinding(Connectors.HTTP)
