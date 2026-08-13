@@ -14,7 +14,7 @@ import misk.web.ResponseContentType
 import misk.web.actions.WebAction
 import misk.web.mediatype.MediaTypes
 
-class StartBackfillRequest
+class StartBackfillRequest(val approve: Boolean = false)
 class StartBackfillResponse
 
 class StartBackfillAction @Inject constructor(
@@ -34,7 +34,11 @@ class StartBackfillAction @Inject constructor(
   ): StartBackfillResponse {
     // TODO check user has permissions for this service with access api
     logger.info { "Start backfill $id by ${caller.get()?.user}" }
-    backfillStateToggler.toggleRunningState(id, caller.get()!!, BackfillState.RUNNING)
+    if (request.approve) {
+      backfillStateToggler.approveAndStart(id, caller.get()!!)
+    } else {
+      backfillStateToggler.toggleRunningState(id, caller.get()!!, BackfillState.RUNNING)
+    }
     return StartBackfillResponse()
   }
 

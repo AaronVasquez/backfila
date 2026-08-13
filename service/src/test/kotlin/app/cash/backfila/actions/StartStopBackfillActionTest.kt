@@ -21,6 +21,7 @@ import app.cash.backfila.service.persistence.BackfillState
 import app.cash.backfila.service.persistence.DbBackfillRun
 import com.google.inject.Module
 import jakarta.inject.Inject
+import java.time.Instant
 import kotlin.test.assertNotNull
 import misk.exceptions.BadRequestException
 import misk.hibernate.Id
@@ -33,6 +34,8 @@ import misk.testing.MiskTestModule
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 @MiskTest(startService = true)
 class StartStopBackfillActionTest {
@@ -519,6 +522,67 @@ class StartStopBackfillActionTest {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `required backfills need a different human approver for dry and wet runs`(dryRun: Boolean) {
+    val id = createApprovalBackfill(dryRun)
+
+    assertThatThrownBy {
+      scope.fakeCaller(user = "diana") {
+        startBackfillAction.start(id, StartBackfillRequest())
+      }
+    }.isInstanceOf(BadRequestException::class.java)
+    assertThatThrownBy {
+      scope.fakeCaller(service = "automation") {
+        startBackfillAction.start(id, StartBackfillRequest(approve = true))
+      }
+    }.isInstanceOf(BadRequestException::class.java)
+    assertThatThrownBy {
+      scope.fakeCaller(user = "molly") {
+        startBackfillAction.start(id, StartBackfillRequest(approve = true))
+      }
+    }.isInstanceOf(BadRequestException::class.java)
+
+    scope.fakeCaller(user = "diana") {
+      startBackfillAction.start(id, StartBackfillRequest(approve = true))
+      stopBackfillAction.stop(id, StopBackfillRequest())
+    }
+    scope.fakeCaller(user = "emma") {
+      startBackfillAction.start(id, StartBackfillRequest())
+    }
+
+    transacter.transaction { session ->
+      val run = session.load(Id<DbBackfillRun>(id))
+      assertThat(run.state).isEqualTo(BackfillState.RUNNING)
+      assertThat(run.approved_by_user).isEqualTo("diana")
+      assertThat(run.approved_at).isNotNull()
+    }
+  }
+
+  @Test
+  fun `required backfills fail closed for invalid persisted approvals`() {
+    val id = createApprovalBackfill(dryRun = true)
+    transacter.transaction { session ->
+      session.load(Id<DbBackfillRun>(id)).approved_by_user = "diana"
+    }
+    assertThatThrownBy {
+      scope.fakeCaller(user = "emma") {
+        startBackfillAction.start(id, StartBackfillRequest(approve = true))
+      }
+    }.isInstanceOf(BadRequestException::class.java)
+
+    transacter.transaction { session ->
+      val run = session.load(Id<DbBackfillRun>(id))
+      run.approved_by_user = "molly"
+      run.approved_at = Instant.parse("2020-01-01T00:00:00Z")
+    }
+    assertThatThrownBy {
+      scope.fakeCaller(user = "emma") {
+        startBackfillAction.start(id, StartBackfillRequest())
+      }
+    }.isInstanceOf(BadRequestException::class.java)
+  }
+
   @Test
   fun cantToggleCompletedBackfill() {
     scope.fakeCaller(service = "deep-fryer") {
@@ -558,6 +622,34 @@ class StartStopBackfillActionTest {
       assertThatThrownBy {
         stopBackfillAction.stop(id, StopBackfillRequest())
       }.isInstanceOf(BadRequestException::class.java)
+    }
+  }
+
+  private fun createApprovalBackfill(dryRun: Boolean): Long {
+    scope.fakeCaller(service = "deep-fryer") {
+      configureServiceAction.configureService(
+        ConfigureServiceRequest.Builder()
+          .backfills(
+            listOf(
+              ConfigureServiceRequest.BackfillData(
+                "ChickenSandwich", "Description", listOf(), null,
+                null, true, null, null,
+              ),
+            ),
+          )
+          .connector_type(Connectors.ENVOY)
+          .build(),
+      )
+    }
+    return scope.fakeCaller(user = "molly") {
+      createBackfillAction.create(
+        "deep-fryer",
+        RESERVED_VARIANT,
+        CreateBackfillRequest.Builder()
+          .backfill_name("ChickenSandwich")
+          .dry_run(dryRun)
+          .build(),
+      ).backfill_run_id
     }
   }
 }

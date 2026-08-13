@@ -19,12 +19,16 @@ import app.cash.backfila.protos.service.Parameter
 import app.cash.backfila.service.persistence.BackfilaDb
 import app.cash.backfila.service.persistence.BackfillRunQuery
 import app.cash.backfila.service.persistence.BackfillState
+import app.cash.backfila.service.persistence.DbBackfillRun
 import app.cash.backfila.service.persistence.RunPartitionQuery
 import com.google.inject.Module
 import jakarta.inject.Inject
+import java.time.Instant
 import misk.exceptions.BadRequestException
+import misk.hibernate.Id
 import misk.hibernate.Query
 import misk.hibernate.Transacter
+import misk.hibernate.load
 import misk.hibernate.newQuery
 import misk.scope.ActionScope
 import misk.testing.MiskTest
@@ -108,6 +112,11 @@ class CloneBackfillActionTest {
           .parameter_map(mapOf("param1" to "val1".encodeUtf8()))
           .build(),
       )
+      transacter.transaction { session ->
+        val source = session.load(Id<DbBackfillRun>(response.backfill_run_id))
+        source.approved_by_user = "diana"
+        source.approved_at = Instant.parse("2020-01-01T00:00:00Z")
+      }
 
       val cloneResponse = cloneBackfillAction.create(
         response.backfill_run_id,
@@ -133,6 +142,11 @@ class CloneBackfillActionTest {
       assertThat(status.scan_size).isEqualTo(223)
       assertThat(status.backoff_schedule).isEqualTo("1000,2000")
       assertThat(status.extra_sleep_ms).isEqualTo(15)
+      transacter.transaction { session ->
+        val clone = session.load(Id<DbBackfillRun>(cloneResponse.id))
+        assertThat(clone.approved_by_user).isNull()
+        assertThat(clone.approved_at).isNull()
+      }
     }
   }
 

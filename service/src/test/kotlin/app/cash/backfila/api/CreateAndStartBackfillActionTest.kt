@@ -17,6 +17,7 @@ import misk.scope.ActionScope
 import misk.testing.MiskTest
 import misk.testing.MiskTestModule
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 @MiskTest(startService = true)
@@ -79,6 +80,37 @@ class CreateAndStartBackfillActionTest {
       assertThat(status.partitions[0].state).isEqualTo(BackfillState.RUNNING)
       assertThat(status.partitions[1].name).isEqualTo("80-")
       assertThat(status.partitions[1].state).isEqualTo(BackfillState.RUNNING)
+    }
+  }
+
+  @Test
+  fun `create and start cannot bypass required approval`() {
+    scope.fakeCaller(service = "deep-fryer") {
+      configureServiceAction.configureService(
+        ConfigureServiceRequest.Builder()
+          .backfills(
+            listOf(
+              ConfigureServiceRequest.BackfillData(
+                "ChickenSandwich", "Description", listOf(), null,
+                null, true, null, null,
+              ),
+            ),
+          )
+          .connector_type(Connectors.ENVOY)
+          .build(),
+      )
+
+      assertThatThrownBy {
+        createAndStartBackfillAction.createAndStartBackfill(
+          CreateAndStartBackfillRequest.Builder()
+            .create_request(
+              CreateBackfillRequest.Builder()
+                .backfill_name("ChickenSandwich")
+                .build(),
+            )
+            .build(),
+        )
+      }.isInstanceOf(misk.exceptions.BadRequestException::class.java)
     }
   }
 }
